@@ -141,4 +141,4 @@ When deploying to production (Railway, Render, etc.):
 
 ## License
 
-MIT — see LICENSE
+MIT — see [LICENSE](https://github.com/Pantane1/pay-it/blob/main/LICENSE)
