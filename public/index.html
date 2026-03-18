@@ -368,111 +368,101 @@ padding: 0.5rem 0;
     </div>
   </div>
 
-  <script>
-    // ── STATE ──────────────────────────────────────────────────────────────────
-    let selectedAmount = 100;
-    let customMode = false;
+<script>
+var selectedAmount = 100;
+var customMode = false;
 
-    const amountBig    = document.getElementById("amountBig");
-    const quickAmounts = document.querySelectorAll(".qa");
-    const customRow    = document.getElementById("customAmountRow");
-    const customInput  = document.getElementById("customAmount");
-    const phoneInput   = document.getElementById("phoneInput");
-    const payBtn       = document.getElementById("payBtn");
-    const statusMsg    = document.getElementById("statusMsg");
-    const toggleCustom = document.getElementById("toggleCustom");
+var amountBig = document.getElementById("amountBig");
+var quickAmounts = document.querySelectorAll(".qa");
+var customRow = document.getElementById("customAmountRow");
+var customInput = document.getElementById("customAmount");
+var phoneInput = document.getElementById("phoneInput");
+var payBtn = document.getElementById("payBtn");
+var statusMsg = document.getElementById("statusMsg");
+var toggleCustom = document.getElementById("toggleCustom");
 
-    // ── QUICK AMOUNTS ─────────────────────────────────────────────────────────
-    quickAmounts.forEach(btn => {
-      btn.addEventListener("click", () => {
-        quickAmounts.forEach(b => b.classList.remove("active"));
-        btn.classList.add("active");
-        selectedAmount = parseInt(btn.dataset.val);
-        amountBig.innerHTML = ${selectedAmount} <span class="amount-currency">KES</span>;
-        customMode = false;
-        customRow.classList.remove("visible");
-        toggleCustom.textContent = "Change amount ↓";
-      });
-    });
+quickAmounts.forEach(function(btn) {
+  btn.addEventListener("click", function() {
+    quickAmounts.forEach(function(b) { b.classList.remove("active"); });
+    btn.classList.add("active");
+    selectedAmount = parseInt(btn.dataset.val);
+    amountBig.innerHTML = selectedAmount + ' <span class="amount-currency">KES</span>';
+    customMode = false;
+    customRow.classList.remove("visible");
+    toggleCustom.textContent = "Change amount";
+  });
+});
 
-    // ── TOGGLE CUSTOM ─────────────────────────────────────────────────────────
-    toggleCustom.addEventListener("click", () => {
-      customMode = !customMode;
-      customRow.classList.toggle("visible", customMode);
-      toggleCustom.textContent = customMode ? "Use preset ↑" : "Change amount ↓";
-      if (customMode) customInput.focus();
-    });
-customInput.addEventListener("input", () => {
-      const v = parseFloat(customInput.value);
-      if (v > 0) {
-        selectedAmount = v;
-        quickAmounts.forEach(b => b.classList.remove("active"));
-        amountBig.innerHTML = ${v} <span class="amount-currency">KES</span>;
-      }
-    });
+toggleCustom.addEventListener("click", function() {
+  customMode = !customMode;
+  customRow.classList.toggle("visible", customMode);
+  toggleCustom.textContent = customMode ? "Use preset" : "Change amount";
+  if (customMode) customInput.focus();
+});
 
-    // ── PHONE VALIDATION ──────────────────────────────────────────────────────
-    function validatePhone(p) {
-      return /^(\+254|0)[17]\d{8}$/.test(p.trim());
+customInput.addEventListener("input", function() {
+  var v = parseFloat(customInput.value);
+  if (v > 0) {
+    selectedAmount = v;
+    quickAmounts.forEach(function(b) { b.classList.remove("active"); });
+    amountBig.innerHTML = v + ' <span class="amount-currency">KES</span>';
+  }
+});
+
+function validatePhone(p) {
+  return /^(\+254|0)[17]\d{8}$/.test(p.trim());
+}
+
+function showStatus(msg, type) {
+  statusMsg.className = "status " + type;
+  statusMsg.textContent = msg;
+}
+
+payBtn.addEventListener("click", function() {
+  var phone = phoneInput.value.trim();
+  statusMsg.className = "status";
+  phoneInput.classList.remove("error");
+
+  if (!validatePhone(phone)) {
+    phoneInput.classList.add("error");
+    showStatus("Enter a valid Kenyan number e.g. 0712345678", "error-msg");
+    return;
+  }
+
+  if (!selectedAmount || selectedAmount < 1) {
+    showStatus("Amount must be at least KES 1.", "error-msg");
+    return;
+  }
+
+  payBtn.classList.add("loading");
+  payBtn.disabled = true;
+
+  fetch("http://localhost:3000/api/pay", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ phone: phone, amount: selectedAmount })
+  })
+  .then(function(res) { return res.json(); })
+  .then(function(data) {
+    if (data.success) {
+      showStatus("STK Push sent! Check your phone.\nTransaction ID: " + data.transactionId, "success");
+      phoneInput.value = "";
+    } else {
+      showStatus(data.message, "error-msg");
     }
+  })
+  .catch(function() {
+    showStatus("Network error. Is the server running?", "error-msg");
+  })
+  .finally(function() {
+    payBtn.classList.remove("loading");
+    payBtn.disabled = false;
+  });
+});
 
-    // ── SHOW STATUS ───────────────────────────────────────────────────────────
-    function showStatus(msg, type) {
-      statusMsg.className = "status " + type;
-      statusMsg.textContent = msg;
-    }
-
-    // ── PAY ───────────────────────────────────────────────────────────────────
-    payBtn.addEventListener("click", async () => {
-      const phone = phoneInput.value.trim();
-
-      // Clear old status
-      statusMsg.className = "status";
-      phoneInput.classList.remove("error");
-
-      if (!validatePhone(phone)) {
-        phoneInput.classList.add("error");
-        showStatus("⚠ Enter a valid Kenyan number e.g. 0712345678 or +254712345678", "error-msg");
-        return;
-      }
-
-      if (!selectedAmount || selectedAmount < 1) {
-        showStatus("⚠ Amount must be at least KES 1.", "error-msg");
-        return;
-      }
-
-      // Loading state
-      payBtn.classList.add("loading");
-      payBtn.disabled = true;
-
-      try {
-        const res = await fetch("http://localhost:3000/api/pay", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ phone, amount: selectedAmount }),
-        });
-
-        const data = await res.json();
-
-        if (data.success) {
-          showStatus(
-            ✓ STK Push sent! Check your phone now.\nTransaction ID: ${data.transactionId},
-            "success"
-          );
-          phoneInput.value = "";
-        } else {
-          showStatus(✗ ${data.message}, "error-msg");
-        }
-      } catch (err) {
-        showStatus("✗ Network error. Is the server running?", "error-msg");
-      } finally {
-        payBtn.classList.remove("loading");
-        payBtn.disabled = false;
-      }
-    });
-
-    // Allow Enter to trigger pay
-    phoneInput.addEventListener("keydown", e => { if (e.key === "Enter") payBtn.click(); });
-  </script>
+phoneInput.addEventListener("keydown", function(e) {
+  if (e.key === "Enter") payBtn.click();
+});
+</script>
 </body>
 </html>
