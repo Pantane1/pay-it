@@ -1,0 +1,478 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Pay · Lipana</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;700;800&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:        #090b10;
+      --surface:   #0e1118;
+      --border:    rgba(255,255,255,0.07);
+      --green:     #00e676;
+      --green-dim: rgba(0,230,118,0.12);
+      --red:       #ff4d6d;
+      --text:      #e8eaf0;
+      --muted:     rgba(232,234,240,0.45);
+      --mono:      'IBM Plex Mono', monospace;
+      --sans:      'Syne', sans-serif;
+    }
+
+    html, body {
+      height: 100%;
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--sans);
+      overflow-x: hidden;
+    }
+
+    /* ── NOISE GRAIN ── */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");
+      pointer-events: none;
+      z-index: 0;
+      opacity: 0.5;
+    }
+
+    /* ── GLOW BLOB ── */
+    .blob {
+      position: fixed;
+      width: 600px; height: 600px;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(0,230,118,0.07) 0%, transparent 70%);
+      top: -200px; left: 50%;
+      transform: translateX(-50%);
+      pointer-events: none;
+      z-index: 0;
+      animation: pulse 6s ease-in-out infinite;
+    }
+    @keyframes pulse {
+      0%, 100% { transform: translateX(-50%) scale(1); opacity: 1; }
+      50% { transform: translateX(-50%) scale(1.08); opacity: 0.7; }
+    }
+
+    /* ── LAYOUT ── */
+    .wrapper {
+      position: relative;
+      z-index: 1;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 2rem 1rem;
+    }
+
+    /* ── CARD ── */
+    .card {
+      width: 100%;
+      max-width: 460px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 2.5rem 2rem;
+      box-shadow: 0 0 60px rgba(0,0,0,0.6), 0 0 0 1px rgba(0,230,118,0.04);
+      animation: slideUp 0.5s cubic-bezier(0.22,1,0.36,1) both;
+    }
+    @keyframes slideUp {
+      from { opacity: 0; transform: translateY(28px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    /* ── HEADER ── */
+    .card-header {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      margin-bottom: 2rem;
+    }
+    .logo-mark {
+      width: 38px; height: 38px;
+      background: var(--green-dim);
+      border: 1px solid rgba(0,230,118,0.25);
+      border-radius: 10px;
+      display: grid;
+      place-items: center;
+      flex-shrink: 0;
+    }
+    .logo-mark svg { width: 18px; height: 18px; fill: var(--green); }
+
+    .header-text h1 {
+      font-size: 1.1rem;
+      font-weight: 800;
+      letter-spacing: -0.02em;
+      line-height: 1;
+    }
+    .header-text p {
+      font-family: var(--mono);
+      font-size: 0.7rem;
+      color: var(--muted);
+      margin-top: 3px;
+    }
+
+    /* ── AMOUNT DISPLAY ── */
+    .amount-display {
+      text-align: center;
+      margin-bottom: 2rem;
+      padding: 1.5rem;
+      background: rgba(0,230,118,0.04);
+      border: 1px solid rgba(0,230,118,0.1);
+      border-radius: 14px;
+    }
+    .amount-label {
+      font-family: var(--mono);
+      font-size: 0.65rem;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 0.5rem;
+    }
+    .amount-value {
+      font-size: 3rem;
+      font-weight: 800;
+      letter-spacing: -0.04em;
+      color: var(--green);
+line-height: 1;
+    }
+    .amount-currency {
+      font-size: 1.1rem;
+      color: var(--muted);
+      margin-left: 4px;
+      font-weight: 400;
+    }
+    .amount-editable {
+      font-family: var(--mono);
+      font-size: 0.65rem;
+      color: var(--muted);
+      margin-top: 0.5rem;
+      cursor: pointer;
+      text-decoration: underline;
+      text-underline-offset: 3px;
+    }
+    .amount-editable:hover { color: var(--green); }
+
+    /* ── FORM ── */
+    .field {
+      margin-bottom: 1.25rem;
+    }
+    label {
+      display: block;
+      font-family: var(--mono);
+      font-size: 0.65rem;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 0.5rem;
+    }
+    input {
+      width: 100%;
+      padding: 0.875rem 1rem;
+      background: rgba(255,255,255,0.03);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      color: var(--text);
+      font-family: var(--mono);
+      font-size: 0.95rem;
+      outline: none;
+      transition: border-color 0.2s, background 0.2s, box-shadow 0.2s;
+    }
+    input::placeholder { color: rgba(232,234,240,0.2); }
+    input:focus {
+      border-color: rgba(0,230,118,0.4);
+      background: rgba(0,230,118,0.04);
+      box-shadow: 0 0 0 3px rgba(0,230,118,0.06);
+    }
+    input.error { border-color: rgba(255,77,109,0.5); }
+
+    /* custom amount row */
+    .amount-row { display: none; }
+    .amount-row.visible { display: block; }
+
+    /* ── BUTTON ── */
+    .pay-btn {
+      width: 100%;
+      padding: 1rem;
+      background: var(--green);
+      color: #000;
+      font-family: var(--sans);
+      font-size: 0.95rem;
+      font-weight: 800;
+      letter-spacing: 0.02em;
+      border: none;
+      border-radius: 10px;
+      cursor: pointer;
+      margin-top: 0.5rem;
+      transition: transform 0.15s, box-shadow 0.2s, background 0.2s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+      position: relative;
+      overflow: hidden;
+    }
+    .pay-btn::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: rgba(255,255,255,0.12);
+      opacity: 0;
+      transition: opacity 0.2s;
+    }
+    .pay-btn:hover { box-shadow: 0 0 24px rgba(0,230,118,0.35); transform: translateY(-1px); }
+    .pay-btn:hover::after { opacity: 1; }
+    .pay-btn:active { transform: translateY(0); }
+    .pay-btn:disabled { background: rgba(0,230,118,0.3); cursor: not-allowed; transform: none; box-shadow: none; }
+
+    /* spinner */
+    .spinner {
+      width: 18px; height: 18px;
+      border: 2px solid rgba(0,0,0,0.3);
+      border-top-color: #000;
+      border-radius: 50%;
+      animation: spin 0.6s linear infinite;
+      display: none;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .pay-btn.loading .btn-text { display: none; }
+    .pay-btn.loading .spinner { display: block; }
+
+    /* ── STATUS MESSAGE ── */
+    .status {
+      margin-top: 1.25rem;
+      padding: 0.875rem 1rem;
+      border-radius: 10px;
+      font-family: var(--mono);
+      font-size: 0.78rem;
+      line-height: 1.5;
+      display: none;
+      animation: fadeIn 0.3s ease both;
+    }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+    .status.success {
+      display: block;
+      background: rgba(0,230,118,0.08);
+      border: 1px solid rgba(0,230,118,0.2);
+      color: var(--green);
+    }
+    .status.error-msg {
+      display: block;
+      background: rgba(255,77,109,0.08);
+      border: 1px solid rgba(255,77,109,0.2);
+      color: var(--red);
+    }
+
+    /* ── FOOTER ── */
+    .card-footer {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+      margin-top: 1.75rem;
+      font-family: var(--mono);
+      font-size: 0.65rem;
+      color: var(--muted);
+    }
+    .card-footer svg { width: 13px; height: 13px; fill: var(--muted); }
+
+    /* ── QUICK AMOUNTS ── */
+    .quick-amounts {
+      display: flex;
+      gap: 0.5rem;
+      margin-bottom: 1.25rem;
+    }
+    .qa {
+      flex: 1;
+padding: 0.5rem 0;
+      background: rgba(255,255,255,0.03);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      font-family: var(--mono);
+      font-size: 0.75rem;
+      color: var(--muted);
+      cursor: pointer;
+      text-align: center;
+      transition: all 0.15s;
+    }
+    .qa:hover, .qa.active {
+      border-color: rgba(0,230,118,0.35);
+      color: var(--green);
+      background: var(--green-dim);
+    }
+  </style>
+</head>
+<body>
+  <div class="blob"></div>
+  <div class="wrapper">
+    <div class="card">
+
+      <!-- HEADER -->
+      <div class="card-header">
+        <div class="logo-mark">
+          <svg viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+        </div>
+        <div class="header-text">
+          <h1>Secure Payment</h1>
+          <p>Powered by Lipana · M-Pesa STK Push</p>
+        </div>
+      </div>
+
+      <!-- AMOUNT DISPLAY -->
+      <div class="amount-display" id="amountDisplay">
+        <div class="amount-label">Amount</div>
+        <div class="amount-value" id="amountBig">100 <span class="amount-currency">KES</span></div>
+        <div class="amount-editable" id="toggleCustom">Change amount ↓</div>
+      </div>
+
+      <!-- QUICK AMOUNTS -->
+      <div class="quick-amounts" id="quickAmounts">
+        <button class="qa" data-val="50">50</button>
+        <button class="qa active" data-val="100">100</button>
+        <button class="qa" data-val="250">250</button>
+        <button class="qa" data-val="500">500</button>
+      </div>
+
+      <!-- CUSTOM AMOUNT -->
+      <div class="field amount-row" id="customAmountRow">
+        <label>Custom Amount (KES)</label>
+        <input type="number" id="customAmount" placeholder="e.g. 1500" min="1" />
+      </div>
+
+      <!-- PHONE -->
+      <div class="field">
+        <label>M-Pesa Phone Number</label>
+        <input type="tel" id="phoneInput" placeholder="07XX XXX XXX or +2547XX XXX XXX" />
+      </div>
+
+      <!-- PAY BUTTON -->
+      <button class="pay-btn" id="payBtn">
+        <span class="btn-text">Send STK Push →</span>
+        <div class="spinner"></div>
+      </button>
+
+      <!-- STATUS -->
+      <div class="status" id="statusMsg"></div>
+
+      <!-- FOOTER -->
+      <div class="card-footer">
+        <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 14.5v-5l-1.5 1.5L7 11.5l5-5 5 5-1.5 1.5L14 11.5v5h-4z"/></svg>
+        256-bit encrypted · Lipana Production
+      </div>
+
+    </div>
+  </div>
+
+  <script>
+    // ── STATE ──────────────────────────────────────────────────────────────────
+    let selectedAmount = 100;
+    let customMode = false;
+
+    const amountBig    = document.getElementById("amountBig");
+    const quickAmounts = document.querySelectorAll(".qa");
+    const customRow    = document.getElementById("customAmountRow");
+    const customInput  = document.getElementById("customAmount");
+    const phoneInput   = document.getElementById("phoneInput");
+    const payBtn       = document.getElementById("payBtn");
+    const statusMsg    = document.getElementById("statusMsg");
+    const toggleCustom = document.getElementById("toggleCustom");
+
+    // ── QUICK AMOUNTS ─────────────────────────────────────────────────────────
+    quickAmounts.forEach(btn => {
+      btn.addEventListener("click", () => {
+        quickAmounts.forEach(b => b.classList.remove("active"));
+        btn.classList.add("active");
+        selectedAmount = parseInt(btn.dataset.val);
+        amountBig.innerHTML = ${selectedAmount} <span class="amount-currency">KES</span>;
+        customMode = false;
+        customRow.classList.remove("visible");
+        toggleCustom.textContent = "Change amount ↓";
+      });
+    });
+
+    // ── TOGGLE CUSTOM ─────────────────────────────────────────────────────────
+    toggleCustom.addEventListener("click", () => {
+      customMode = !customMode;
+      customRow.classList.toggle("visible", customMode);
+      toggleCustom.textContent = customMode ? "Use preset ↑" : "Change amount ↓";
+      if (customMode) customInput.focus();
+    });
+customInput.addEventListener("input", () => {
+      const v = parseFloat(customInput.value);
+      if (v > 0) {
+        selectedAmount = v;
+        quickAmounts.forEach(b => b.classList.remove("active"));
+        amountBig.innerHTML = ${v} <span class="amount-currency">KES</span>;
+      }
+    });
+
+    // ── PHONE VALIDATION ──────────────────────────────────────────────────────
+    function validatePhone(p) {
+      return /^(\+254|0)[17]\d{8}$/.test(p.trim());
+    }
+
+    // ── SHOW STATUS ───────────────────────────────────────────────────────────
+    function showStatus(msg, type) {
+      statusMsg.className = "status " + type;
+      statusMsg.textContent = msg;
+    }
+
+    // ── PAY ───────────────────────────────────────────────────────────────────
+    payBtn.addEventListener("click", async () => {
+      const phone = phoneInput.value.trim();
+
+      // Clear old status
+      statusMsg.className = "status";
+      phoneInput.classList.remove("error");
+
+      if (!validatePhone(phone)) {
+        phoneInput.classList.add("error");
+        showStatus("⚠ Enter a valid Kenyan number e.g. 0712345678 or +254712345678", "error-msg");
+        return;
+      }
+
+      if (!selectedAmount || selectedAmount < 1) {
+        showStatus("⚠ Amount must be at least KES 1.", "error-msg");
+        return;
+      }
+
+      // Loading state
+      payBtn.classList.add("loading");
+      payBtn.disabled = true;
+
+      try {
+        const res = await fetch("/api/pay", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ phone, amount: selectedAmount }),
+        });
+
+        const data = await res.json();
+
+        if (data.success) {
+          showStatus(
+            ✓ STK Push sent! Check your phone now.\nTransaction ID: ${data.transactionId},
+            "success"
+          );
+          phoneInput.value = "";
+        } else {
+          showStatus(✗ ${data.message}, "error-msg");
+        }
+      } catch (err) {
+        showStatus("✗ Network error. Is the server running?", "error-msg");
+      } finally {
+        payBtn.classList.remove("loading");
+        payBtn.disabled = false;
+      }
+    });
+
+    // Allow Enter to trigger pay
+    phoneInput.addEventListener("keydown", e => { if (e.key === "Enter") payBtn.click(); });
+  </script>
+</body>
+</html>
