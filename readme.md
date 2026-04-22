@@ -4,7 +4,7 @@ A production-ready M-Pesa STK Push payment page built with Node.js, Express, and
 
 ---
 
-## How It Works
+## How It Works..
 
 1. The user enters their **M-Pesa phone number** and selects an **amount** on the payment page
 2. They click **Send STK Push**
